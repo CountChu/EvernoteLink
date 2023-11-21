@@ -1,0 +1,12 @@
+files:
+  - name: fuzzy_vault.py
+    file: GitHub/fuzzy_vault/fuzzy_vault.py
+
+findFiles:  
+  - dir: GitHub/fuzzy_vault
+
+findDocuments:  
+  - dir: GitHub/fuzzy_vault
+
+findDirs:  
+  - dir: GitHub/fuzzy_vault    

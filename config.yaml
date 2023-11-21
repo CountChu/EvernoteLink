@@ -1,0 +1,21 @@
+userName: YOUR_NAME
+authToken: YOUR_TOKEN
+notebook: C1 - Auto
+
+openLinkApp:
+  defaultNativeName: M1
+  clouds:
+    - name: iCloud
+      natives:
+        - name: M1
+          prefix: file://
+          path: /YOUR_HOME/AutoEvernote/test_data/iCloud
+        - name: P15s
+          path: C:\YOUR_HOME\AutoEvernote\test_data\iCloud
+    - name: Dropbox
+      natives:
+        - name: M1
+          prefix: file://
+          path: /YOUR_HOME/AutoEvernote/test_data/Dropbox
+        - name: P15s
+          path: C:\YOUR_HOME\test_data\Dropbox

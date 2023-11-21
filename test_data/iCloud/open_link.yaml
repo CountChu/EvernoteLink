@@ -1,0 +1,20 @@
+files:
+
+  - name: 2018 DARLA
+    file: Papers/2018 DARLA/higgins17a.pdf
+
+  - name: 2020 Emergence Separable Manifolds
+    file: Papers/2020 Emergence Separable Manifolds/2006.01095.pdf
+
+  - name: 2020 GAN Image Privacy
+    file: Papers/2020 GAN Image Privacy/A914pizyn_i3cn14_dmc.tmp.pdf
+
+findFiles:  
+  - dir: Papers
+
+findDocuments:
+  - dir: Papers
+
+findDirs:
+  - dir: Papers
+    display: true 

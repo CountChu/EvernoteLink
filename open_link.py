@@ -11,7 +11,7 @@
 # NOTICE.
 #       Author: visualge@gmail.com (CountChu)
 #       Created on 2023/6/6
-#       Updated on 2023/11/21
+#       Updated on 2023/12/14
 #
 
 import argparse
@@ -88,7 +88,7 @@ def find_only_one_document(path, check=True):
             continue
 
         ext = os.path.splitext(bn)[1]
-        if not ext in ['.pdf', 'docx', 'doc', 'pptx', 'ppt']:
+        if not ext in ['.pdf', '.docx', '.doc', '.pptx', '.ppt']:
             continue
 
         print(bn)
@@ -181,8 +181,10 @@ def handle_ol_findDocuments(ol_cfg, defaultNative):
     files = []
     for _dir in ol_cfg['findDocuments']:
         dn = os.path.join(defaultNative['path'], _dir['dir'])
+
         for bn in os.listdir(dn):
             sub_dn = os.path.join(dn, bn)
+
             if not os.path.isfile(sub_dn):
                 fn, count = find_only_one_document(sub_dn, False)
                 if count == 1:

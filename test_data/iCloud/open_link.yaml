@@ -17,4 +17,4 @@ findDocuments:
 
 findDirs:
   - dir: Papers
-    display: true 
+    displayPath: true 

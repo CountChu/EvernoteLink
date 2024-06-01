@@ -1,21 +1,28 @@
 userName: YOUR_NAME
 authToken: YOUR_TOKEN
-notebook: C1 - Auto
+notebook: YOUR_NOTEBOOK_OF_EVERNOTE
 
 openLinkApp:
-  defaultNativeName: M1
+  defaultNativeName: YOUR_MAC_NAME
   clouds:
     - name: iCloud
       natives:
-        - name: M1
+        - name: YOUR_MAC_NAME
           prefix: file://
           path: /YOUR_HOME/AutoEvernote/test_data/iCloud
-        - name: P15s
+        - name: YOUR_PC_NAME
           path: C:\YOUR_HOME\AutoEvernote\test_data\iCloud
     - name: Dropbox
       natives:
-        - name: M1
+        - name: YOUR_MAC_NAME
           prefix: file://
           path: /YOUR_HOME/AutoEvernote/test_data/Dropbox
-        - name: P15s
+        - name: YOUR_PC_NAME
           path: C:\YOUR_HOME\test_data\Dropbox
+    - name: GoogleDrive
+      natives:
+        - name: YOUR_MAC_NAME
+          prefix: file://
+          path: /YOUR_HOME/AutoEvernote/test_data/GoogleDrive
+        - name: YOUR_PC_NAME
+          path: C:\YOUR_HOME\test_data\GoogleDrive

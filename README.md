@@ -3,7 +3,7 @@ The project provides python applications to generate useful notes of Evernote.
 
 # Dependency
 
-The app depends on the package, [EvernoteWrapper](https://github.com/CountChu/EvernoteWrapper) and [CountPackage](https://github.com/CountChu/CountPackage)
+The app depends on the package, [EvernoteWrapper](https://github.com/CountChu/EvernoteWrapper) and [CountPackage](https://github.com/CountChu/CountPackage).
 
 # Usages
 

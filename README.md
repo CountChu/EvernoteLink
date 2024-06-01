@@ -1,6 +1,12 @@
 # AutoEvernote
 The project provides python applications to generate useful notes of Evernote.
 
+# Dependency
+
+The app depends on the package, [EvernoteWrapper](https://github.com/CountChu/EvernoteWrapper) and [CountPackage](https://github.com/CountChu/CountPackage)
+
+# Usages
+
 ## open_link.py
 
 The app generates a note of Evernote that contains links of your local files or directories.

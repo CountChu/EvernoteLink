@@ -11,7 +11,7 @@
 # NOTICE.
 #       Author: visualge@gmail.com (CountChu)
 #       Created on 2023/6/6
-#       Updated on 2023/12/14
+#       Updated on 2024/4/25
 #
 
 import argparse
@@ -24,8 +24,10 @@ import json
 import pdb
 
 from evernote_wrapper import EvernoteWrapper
-import evernote.edam.type.ttypes as Types
+from evernote_wrapper import eve_util
+from Count import cnt_util
 
+import api
 import util
 
 br = pdb.set_trace
@@ -64,41 +66,6 @@ def build_args():
 
     return args
 
-def find_only_one_file(path, check=True):
-    count = 0
-    out = None    
-    for bn in os.listdir(path):
-        if bn == '.DS_Store':
-            continue
-
-        print(bn)
-        out = bn
-        count += 1
-
-    if check:
-        assert count == 1, path
-
-    return out, count
-
-def find_only_one_document(path, check=True):
-    count = 0
-    out = None
-    for bn in os.listdir(path):
-        if bn == '.DS_Store':
-            continue
-
-        ext = os.path.splitext(bn)[1]
-        if not ext in ['.pdf', '.docx', '.doc', '.pptx', '.ppt']:
-            continue
-
-        print(bn)
-        out = bn
-        count += 1
-
-    if check:
-        assert count == 1, path
-
-    return out, count
 
 #
 # files = [file]
@@ -106,14 +73,16 @@ def find_only_one_document(path, check=True):
 #    
 
 def handle_ol_files(ol_cfg, defaultNative):
-    files = []
+    if ol_cfg['files'] == None:
+        return []
 
+    files = []
     for file in ol_cfg['files']:
-        new_file = {}
 
         if 'file' in file:
             assert not 'dir' in file 
 
+            new_file = {}
             if 'name' in file:
                 new_file['name'] = file['name']
 
@@ -133,16 +102,25 @@ def handle_ol_files(ol_cfg, defaultNative):
             #
 
             fn = os.path.join(defaultNative['path'], file['file'])
+            if not os.path.exists(fn):
+                print('Error! The file does not exist.')
+                print(fn)
+                sys.exit(1)
+
             assert os.path.exists(fn), fn     
 
             if not os.path.isfile(fn):
-                bn, _ = find_only_one_file(fn)
+                bn, _ = util.find_only_one_file(fn)
                 new_file['path'] = os.path.join(file['file'], bn)
             else:
                 new_file['path'] = file['file']
 
+            files.append(new_file)
+
         elif 'dir' in file:
             assert not 'file' in file 
+            
+            new_file = {}
 
             if 'name' in file:
                 new_file['name'] = file['name']
@@ -151,7 +129,18 @@ def handle_ol_files(ol_cfg, defaultNative):
 
             new_file['path'] = file['dir']
 
-        files.append(new_file)
+            files.append(new_file)
+
+            if 'expandFiles' in file and file['expandFiles'] == True:
+                dn = os.path.join(defaultNative['path'], file['dir']) 
+                bn_fn_ls = util.find_files(dn, file['fileTypes'])
+                bn_fn_ls.sort(key=lambda x: os.path.getmtime(x[1]), reverse=True)
+
+                for bn, fn in bn_fn_ls:
+                    new_file = {}
+                    new_file['name'] = bn
+                    new_file['path'] = os.path.join(file['dir'], bn)
+                    files.append(new_file)
 
     return files
 
@@ -162,10 +151,12 @@ def handle_ol_findFiles(ol_cfg, defaultNative):
     files = []
     for _dir in ol_cfg['findFiles']:
         dn = os.path.join(defaultNative['path'], _dir['dir'])
+        cnt_util.check_file_exist(dn)
+
         for bn in os.listdir(dn):
             sub_dn = os.path.join(dn, bn)
             if not os.path.isfile(sub_dn):
-                fn, count = find_only_one_file(sub_dn, False)
+                fn, count = util.find_only_one_file(sub_dn, False)
                 if count == 1:
                     new_file = {}
                     new_file['name'] = bn
@@ -186,7 +177,7 @@ def handle_ol_findDocuments(ol_cfg, defaultNative):
             sub_dn = os.path.join(dn, bn)
 
             if not os.path.isfile(sub_dn):
-                fn, count = find_only_one_document(sub_dn, False)
+                fn, count = util.find_only_one_document(sub_dn, False)
                 if count == 1:
                     new_file = {}
                     new_file['name'] = bn
@@ -213,8 +204,8 @@ def handle_ol_findDirs(ol_cfg, defaultNative):
             file['path'] = _dir['dir'] + '/' + bn
 
             file['name'] = bn
-            if 'display' in _dir:
-                if _dir['display']:
+            if 'displayPath' in _dir:
+                if _dir['displayPath']:
                     file['name'] = file['path']
 
             files.append(file)
@@ -231,14 +222,12 @@ def handle_ol_findDirs(ol_cfg, defaultNative):
 #    
 
 def handle_cloud(cfg, cloud):
-    defaultNative = util.find_defaultNative(cfg, cloud)
+    defaultNative = api.find_defaultNative(cfg, cloud)
 
     fn = os.path.join(defaultNative['path'], 'open_link.yaml')
     assert os.path.exists(fn), fn
 
-    f = open(fn, 'r', encoding='utf-8')
-    ol_cfg = yaml.load(f, Loader=yaml.CLoader)
-    f.close()
+    ol_cfg = cnt_util.load_yaml(fn)
 
     #
     # section_files_d[name] = files
@@ -291,6 +280,54 @@ def handle_cloud(cfg, cloud):
 
     return new_cloud
 
+def build_note(cfg, ew, cloud):
+    body = ''
+
+    #body += '<h1>%s</h1>' % cloud['name']
+    sectionLinks = cloud['sectionLinks']
+    
+    for section, links in sectionLinks.items():
+        body += '<h1>%s</h1>' % section
+
+        for link in links:
+
+            #
+            # Generate path body
+            #
+
+            path = link['path']
+
+            body += '<div style="--en-codeblock:true; --en-lineWrapping:false;box-sizing: border-box; padding: 8px; font-family: Monaco, Menlo, Consolas, &quot;Courier New&quot;, monospace; font-size: 12px; color: rgb(51, 51, 51); border-top-left-radius: 4px; border-top-right-radius: 4px; border-bottom-right-radius: 4px; border-bottom-left-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.14902); background-position: initial initial; background-repeat: initial initial;">'
+            body += '<div>'
+            body += path
+            body += '</div>'
+            body += '</div>'
+
+            #
+            # Generate fileName body
+            #
+
+            fileName = link['fileName']
+
+            body += eve_util.build_open_link_3(link['natives'], fileName)
+
+            #
+            # break line
+            #
+
+            body += '<br/>'
+
+    #
+    # Build a new note
+    #
+
+
+    title = 'A - OpenLink - %s' % (cloud['name'])
+    nb = ew.get_notebook(cfg['notebook'])    
+    note_guid = eve_util.build_note(ew, nb, title, body)
+
+    return note_guid
+
 def main():
 
     #
@@ -304,7 +341,7 @@ def main():
     #
 
     fn = os.path.join(os.path.dirname(__file__), args.config)
-    cfg = util.load_config(fn)
+    cfg = cnt_util.load_yaml(fn)
     assert 'openLinkApp' in cfg
 
     #
@@ -317,72 +354,6 @@ def main():
         clouds.append(new_cloud)
 
     print(json.dumps(clouds, indent=4))
-
-    #
-    # Build content of a note
-    #
-
-    content = ''
-    content += '<?xml version="1.0" encoding="UTF-8"?>'
-    content += '<!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">'
-    content += '<en-note>'
-
-    for cloud in clouds:
-        content += '<h1>%s</h1>' % cloud['name']
-        sectionLinks = cloud['sectionLinks']
-        
-        for section, links in sectionLinks.items():
-            content += '<h2>%s</h2>' % section
-
-            for link in links:
-
-                #
-                # Generate path content
-                #
-
-                path = link['path']
-
-                content += '<div style="--en-codeblock:true; --en-lineWrapping:false;box-sizing: border-box; padding: 8px; font-family: Monaco, Menlo, Consolas, &quot;Courier New&quot;, monospace; font-size: 12px; color: rgb(51, 51, 51); border-top-left-radius: 4px; border-top-right-radius: 4px; border-bottom-right-radius: 4px; border-bottom-left-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.14902); background-position: initial initial; background-repeat: initial initial;">'
-                content += '<div>'
-                content += path
-                content += '</div>'
-                content += '</div>'
-
-                #
-                # Generate fileName content
-                #
-
-                fileName = link['fileName']
-
-                content += '<div>'
-                content += '<code><span style="font-size: 14px;">'
-                
-                #fileName = fileName.replace('&', '%26')
-                content += fileName
-                
-                content += '</span></code>'
-
-                for native in link['natives']:
-                    url = native['path']
-                    #url = url.replace('&', '%26')
-                    content += '&nbsp;[<a href="%s">%s</a>]' % (url, native['name'])
-
-                content += '</div>'
-
-                #
-                # break line
-                #
-
-                content += '<br/>'
-
-    content += '</en-note>'   
-
-    #
-    # If --test, exit the program.
-    #
-
-    if args.test:
-        sys.exit(0)     
 
     #
     # Create an Evernote Wrapper object
@@ -404,45 +375,22 @@ def main():
     ew.connect(user_name, auth_token)    
 
     #
-    # Search notebook "C1 - Auto"
-    #
-    
-    nb = ew.get_notebook(cfg['notebook'])    
-    
-    #
-    # Connect Evernote service
+    # For each cloud, build a note
     #
 
-    ew.connect(user_name, auth_token)     
+    generatesNotes = []
+
+    for cloud in clouds:
+        note_guid = build_note(cfg, ew, cloud)
+        note = {'guid': note_guid}
+        generatesNotes.append(note)
 
     #
-    # If res_fn exists, delete the old note.
+    # Delete old notes and update res_fn
     #
 
     res_fn = 'res-open-link.yaml'
-    if os.path.exists(res_fn):
-        res = util.load_config(res_fn)
-        assert 'guid' in res 
-        ew.note_store.deleteNote(ew.auth_token, res['guid'])
-        print(f'Successfully deleted the old note of GUID: {res["guid"]}')
-
-    #
-    # Create note_obj
-    #
-
-    note_obj = Types.Note()
-    note_obj.title = "A - OpenLink"
-    note_obj.content = content
-    note_obj.notebookGuid = nb.guid
-    
-    createdNote = ew.note_store.createNote(note_obj)
-    print("Successfully created a new note with GUID: ", createdNote.guid)
-
-    res = {}
-    res['guid'] = createdNote.guid
-    f = open(res_fn, 'w')
-    yaml.dump(res, f)
-    f.close()
+    eve_util.update_res_fn(ew, res_fn, generatesNotes)
 
 if __name__ == '__main__':
     main()  
